@@ -47,6 +47,10 @@ function nice_size(bytes) {
   return bytes + " " + powers[0];
 }
 
+function kb_to_string(kbytes) {
+  return (kbytes / 1024).toFixed(2) + ' MB';
+}
+
 function show_system_backup() {
   $('#backup-status tbody').html("<tr><td colspan='2' class='text-muted'>Loading...</td></tr>")
   api(

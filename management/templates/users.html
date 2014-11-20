@@ -29,6 +29,10 @@
       <option value="admin">Administrator</option>
     </select>
   </div>
+  <div class="form-group">
+    <label class="sr-only" for="adduserQuota">Quota (KB)</label>
+    <input type="text" class="form-control" id="adduserQuota" placeholder="Quota (KB)">
+  </div>
   <button type="submit" class="btn btn-primary">Add User</button>
 </form>
 <p style="margin-top: .5em"><small>
@@ -43,6 +47,7 @@
       <th width="50%">Email Address</th>
       <th>Actions</th>
       <th>Mailbox Size</th>
+      <th>Quota</th>
     </tr>
   </thead>
   <tbody>
@@ -73,6 +78,8 @@
         </a>
     </td>
     <td class='mailboxsize'>
+    </td>
+    <td class='quota'>
     </td>
   </tr>
   <tr id="user-extra-template">
@@ -116,6 +123,7 @@ function show_users() {
           n.attr('data-email', user.email);
           n.find('.address').text(user.email)
           n.find('.mailboxsize').text(nice_size(user.mailbox_size))
+	  n.find('.quota').text(kb_to_string(user.quota))
           n2.find('.restore_info tt').text(user.mailbox);
 
           if (user.status == 'inactive') continue;
@@ -154,13 +162,18 @@ function do_add_user() {
   var email = $("#adduserEmail").val();
   var pw = $("#adduserPassword").val();
   var privs = $("#adduserPrivs").val();
+  var quota = $("#adduserQuota").val();
+
+  if (quota === '') quota = 0;
+
   api(
     "/mail/users/add",
     "POST",
     {
       email: email,
       password: pw,
-      privileges: privs
+      privileges: privs,
+      quota: quota
     },
     function(r) {
       // Responses are multiple lines of pre-formatted text.

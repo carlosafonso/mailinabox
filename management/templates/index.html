@@ -111,6 +111,7 @@
                 <li><a href="#mail-guide" onclick="return show_panel(this);">Instructions</a></li>
                 <li><a href="#users" onclick="return show_panel(this);">Users</a></li>
                 <li><a href="#aliases" onclick="return show_panel(this);">Aliases</a></li>
+		<li><a href="#settings" onclick="return show_panel(this);">Settings</a></li>
               </ul>
             </li>
             <li><a href="#sync_guide" onclick="return show_panel(this);">Contacts/Calendar</a></li>
@@ -154,6 +155,10 @@
 
       <div id="panel_aliases" class="admin_panel">
       {% include "aliases.html" %}
+      </div>
+
+      <div id="panel_settings" class="admin_panel">
+      {% include "settings.html" %}
       </div>
 
       <div id="panel_sync_guide" class="admin_panel">

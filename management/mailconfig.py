@@ -80,17 +80,23 @@ def get_mail_users_ex(env, with_archived=False, with_slow_info=False):
 	# Pre-load all aliases.
 	aliases = get_mail_alias_map(env)
 
+	# Get the system settings
+	settings = get_settings(env)
+
 	# Get users and their privileges.
 	users = []
 	active_accounts = set()
 	c = open_database(env)
-	c.execute('SELECT email, privileges FROM users')
-	for email, privileges in c.fetchall():
+	c.execute('SELECT email, privileges, quota_kb FROM users')
+	for email, privileges, quota_kb in c.fetchall():
 		active_accounts.add(email)
+		if quota_kb is None:
+			quota_kb = settings['default_quota']
 
 		user = {
 			"email": email,
 			"privileges": parse_privs(privileges),
+			"quota": quota_kb,
 			"status": "active",
 		}
 		users.append(user)
@@ -113,6 +119,7 @@ def get_mail_users_ex(env, with_archived=False, with_slow_info=False):
 				user = {
 					"email": email, 
 					"privileges": "",
+					"quota": 0,
 					"status": "inactive",
 					"mailbox": mbox,
 				}
@@ -229,13 +236,21 @@ def get_mail_domains(env, filter_aliases=lambda alias : True):
 		 + [get_domain(source) for source, target in get_mail_aliases(env) if filter_aliases((source, target)) ]
 		 )
 
-def add_mail_user(email, pw, privs, env):
+def add_mail_user(email, pw, privs, quota_kb, env):
 	# validate email
 	if email.strip() == "":
 		return ("No email address provided.", 400)
 	if not validate_email(email, mode='user'):
 		return ("Invalid email address.", 400)
 
+	# validate quota (fall back to default
+	# quota from settings if none was provided)
+	if int(quota_kb) == 0:
+		settings = get_settings(env)
+		quota_kb = settings['default_quota']
+
+	validate_quota(quota_kb)
+	
 	validate_password(pw)
 
 	# validate privileges
@@ -255,8 +270,8 @@ def add_mail_user(email, pw, privs, env):
 
 	# add the user to the database
 	try:
-		c.execute("INSERT INTO users (email, password, privileges) VALUES (?, ?, ?)",
-			(email, pw, "\n".join(privs)))
+		c.execute("INSERT INTO users (email, password, privileges, quota_kb) VALUES (?, ?, ?, ?)",
+			(email, pw, "\n".join(privs), quota_kb))
 	except sqlite3.IntegrityError:
 		return ("User already exists.", 400)
 
@@ -436,6 +451,11 @@ def get_required_aliases(env):
 
 	return aliases
 
+def get_settings(env):
+	conn, c = open_database(env, with_connection=True)
+	c.execute("SELECT key, value FROM settings")
+	return dict((key, val) for key, val in c.fetchall())
+
 def kick(env, mail_result=None):
 	results = []
 
@@ -497,6 +517,14 @@ def validate_password(pw):
 	if len(pw) < 4:
 		raise ValueError("Passwords must be at least four characters.")
 
+def validate_quota(quota):
+	try:
+		quota = float(quota)
+	except ValueError:
+		raise ValueError("Quota must be a number")
+	
+	if (quota < 1024):
+		raise ValueError("Quota must be at least 1 MB (1024 KB)")
 
 if __name__ == "__main__":
 	import sys
